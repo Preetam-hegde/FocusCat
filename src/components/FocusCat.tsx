@@ -230,6 +230,10 @@ function pick<T>(pool: T[], previous?: T): T {
   return next;
 }
 
+function first<T>(pool: T[]): T {
+  return pool[0];
+}
+
 function resolveMood(mode: TimerMode, isRunning: boolean): CatMood {
   if (!isRunning) return "sleep";
   if (mode === "break") return "play";
@@ -269,10 +273,10 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
   const [state, setState] = useState<FocusCatState>(() => ({
     manualMood: null,
     nudged: false,
-    quote: pick(CAT_QUOTES[autoMood]),
+    quote: first(CAT_QUOTES[autoMood]),
     expressionSeed: 0,
     expressionOverride: null,
-    persona: pick(CAT_PERSONALITIES[autoMood]),
+    persona: first(CAT_PERSONALITIES[autoMood]),
     idleEvent: null,
     reactionEmoji: null,
     spriteNum: MOOD_SPRITE[autoMood][0],
