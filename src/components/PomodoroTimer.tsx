@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { playAlertTone } from "@/lib/audio";
 import { FocusCat } from "@/components/FocusCat";
-import { getTimerSharedState, setTimerSharedState } from "@/lib/timer";
+import { DEFAULT_TIMER_STATE, hydrateTimerSharedState, setTimerSharedState } from "@/lib/timer";
 import type { StoredTimerState, TimerMode } from "@/lib/types";
 
 const RING_R = 88
@@ -28,7 +28,7 @@ function formatSeconds(totalSeconds: number) {
 }
 
 export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, theme = "ember" }: PomodoroTimerProps) {
-  const [timerState, setTimerState] = useState<StoredTimerState>(() => getTimerSharedState());
+  const [timerState, setTimerState] = useState<StoredTimerState>(DEFAULT_TIMER_STATE);
   const { workMinutes, breakMinutes, mode, timeLeft, isRunning, autoStartNext, cycleCount } = timerState;
 
   function updateTimerState(updater: StoredTimerState | ((prev: StoredTimerState) => StoredTimerState)) {
@@ -38,6 +38,10 @@ export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, t
       return next;
     });
   }
+
+  useEffect(() => {
+    setTimerState(hydrateTimerSharedState());
+  }, []);
 
   useEffect(() => {
     onModeChange?.(mode);

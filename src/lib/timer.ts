@@ -45,17 +45,23 @@ function sanitizeTimerState(candidate: unknown): StoredTimerState {
 }
 
 export function getTimerSharedState() {
-  if (!timerStateLoaded && typeof window !== "undefined") {
-    try {
-      const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
-      if (raw !== null) {
-        timerSharedState = sanitizeTimerState(JSON.parse(raw));
-      }
-    } catch {
-      timerSharedState = DEFAULT_TIMER_STATE;
-    } finally {
-      timerStateLoaded = true;
+  return timerSharedState;
+}
+
+export function hydrateTimerSharedState() {
+  if (timerStateLoaded || typeof window === "undefined") {
+    return timerSharedState;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(TIMER_STORAGE_KEY);
+    if (raw !== null) {
+      timerSharedState = sanitizeTimerState(JSON.parse(raw));
     }
+  } catch {
+    timerSharedState = DEFAULT_TIMER_STATE;
+  } finally {
+    timerStateLoaded = true;
   }
 
   return timerSharedState;
