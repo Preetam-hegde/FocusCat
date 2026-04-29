@@ -13,10 +13,42 @@ type FocusCatProps = {
 type CatMood = "sleep" | "play" | "stretch";
 type CatExpression = "sleepy" | "calm" | "happy" | "mischief";
 type CatIdleEvent = "yawn" | "twitch" | "blink" | null;
+type CatAnimation = "sitting_down" | "looking_around" | "laying_down" | "walking" | "running" | "running2";
 
-// ─── Personality ──────────────────────────────────────────────────────────────
-// This cat: Lilac ticked tabby · silver eyes · blue nose · green bell collar
-// Personality: Methodical, dry-witted, quietly devoted, mildly chaotic on breaks
+type SpriteSet = "black_1" | "brown_8" | "orange_0" | "white_grey_1";
+
+const SPRITE_SIZE = 32;
+const OUTPUT_SIZE = 150;
+const FRAMES_PER_ANIMATION = 4;
+
+const SPRITE_SET_ORDER: SpriteSet[] = ["orange_0", "black_1"];
+
+const THEME_PRIMARY_SET: Record<"ember" | "mist" | "grove", SpriteSet> = {
+  ember: "orange_0",
+  mist: "black_1",
+  grove: "orange_0",
+};
+
+const MOOD_ANIMATIONS: Record<CatMood, CatAnimation[]> = {
+  sleep: ["sitting_down", "laying_down"],
+  play: ["running", "running2"],
+  stretch: ["walking", "running"],
+};
+
+const IDLE_ANIMATION: Record<Exclude<CatIdleEvent, null>, CatAnimation> = {
+  yawn: "laying_down",
+  twitch: "looking_around",
+  blink: "looking_around",
+};
+
+const ANIMATION_FPS: Record<CatAnimation, number> = {
+  sitting_down: 2,
+  looking_around: 2,
+  laying_down: 2,
+  walking: 4,
+  running: 6,
+  running2: 7,
+};
 
 const CAT_PERSONALITIES: Record<CatMood, string[]> = {
   sleep: [
@@ -82,75 +114,10 @@ const CAT_QUOTES: Record<CatMood, string[]> = {
 
 const REACTION_EMOJI: Record<CatMood, string[]> = {
   sleep: ["💤", "😴", "🌙", "✨", "💭"],
-  play:  ["⚡", "🐾", "✨", "💥", "🎯"],
+  play: ["⚡", "🐾", "✨", "💥", "🎯"],
   stretch: ["🔥", "⚡", "🎯", "💡", "✨"],
 };
 
-// ─── Sprite rendering ─────────────────────────────────────────────────────────
-
-const SPRITE_BASE = "https://cgen-tools.github.io/pixel-cat-maker/sprites/split/";
-
-// Per-theme cat layer config (ClanGen sprite layer names)
-type CatConfig = {
-  pelt: string;          // pelt layer name
-  tint: string | null;   // multiply tint colour, null = no tint needed
-  eyes: string;          // primary eye layer
-  eyes2: string;         // secondary eye layer (glint)
-  skin: string;          // nose/paw pad layer
-  collar: string;        // accessory layer
-  label: string;         // display label shown in persona
-};
-
-// Layer name format: {peltPattern}{COLOUR} / eyes{COLOUR} / skin{COLOUR} / collars{NAME}
-// Valid pelt colours (from ClanGen): CREAM PALEGINGER GOLDEN GINGER DARKGINGER SIENNA
-//   GREY DARKGREY GHOST BLACK WHITE PALEGREY SILVER LIGHTBROWN LILAC BROWN DARKBROWN CHOCOLATE
-// Valid eye colours: YELLOW AMBER HAZEL PALEGREEN GREEN BLUE DARKBLUE GREY CYAN EMERALD
-//   PALEBLUE PALEYELLOW GOLD HEATHERBLUE COPPER SAGE COBALT SUNLITICE GREENYELLOW BRONZE SILVER
-// Valid skin colours (tint/nose): PINK DARKBROWN BROWN LIGHTBROWN BLACK (uppercase in filenames)
-// Sprite indices: Adult 6-8 · Longhair Adult 9-11 · Senior 12-14 · Paralyzed 15-17
-const THEME_CAT: Record<"ember" | "mist" | "grove", CatConfig> = {
-  // Warm ginger — matches Ember theme
-  ember: {
-    pelt: "classicGINGER",
-    tint: null,
-    eyes: "eyesAMBER",
-    eyes2: "eyes2AMBER",
-    skin: "skinPINK",
-    collar: "collarsREDBELL",
-    label: "Ginger classic tabby · amber eyes · red bell",
-  },
-  // Cool grey — matches Mist theme (GREY is a valid pelt colour; BLUE is eye-only)
-  mist: {
-    pelt: "classicGREY",
-    tint: null,
-    eyes: "eyesBLUE",
-    eyes2: "eyes2BLUE",
-    skin: "skinPINK",
-    collar: "collarsBLUEBELL",
-    label: "Grey classic tabby · blue eyes · blue bell",
-  },
-  // Earthy brown — matches Grove theme
-  grove: {
-    pelt: "classicBROWN",
-    tint: null,
-    eyes: "eyesGREEN",
-    eyes2: "eyes2GREEN",
-    skin: "skinPINK",
-    collar: "collarsGREENBELL",
-    label: "Brown classic tabby · green eyes · green bell",
-  },
-};
-
-// Adult pose indices from ClanGen sprite sheet (rows 6-17)
-// 6=sit  7=sit-alert  8=stand  9=stand-alert  10=run  11=sleep  12=groom  13=groom-2  16=alert-stand
-const MOOD_SPRITE: Record<CatMood, number[]> = {
-  sleep:   [11, 6, 7],     // sleeping · drowsy-sit · alert-sit (head-up)
-  play:    [10, 12, 13],   // running  · lick-paw  · full-groom
-  stretch: [16, 8, 9],    // user's confirmed pose · stand · stand-alert
-};
-
-// Module-level cache: keyed by URL, value is the in-flight Promise so parallel
-// requests for the same URL share one fetch rather than starting duplicates.
 const spriteCache = new Map<string, Promise<HTMLImageElement | null>>();
 
 function loadSpriteImg(src: string): Promise<HTMLImageElement | null> {
@@ -158,7 +125,6 @@ function loadSpriteImg(src: string): Promise<HTMLImageElement | null> {
   if (hit) return hit;
   const promise = new Promise<HTMLImageElement | null>((resolve) => {
     const img = new window.Image();
-    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -167,61 +133,31 @@ function loadSpriteImg(src: string): Promise<HTMLImageElement | null> {
   return promise;
 }
 
-async function renderCatCanvas(canvas: HTMLCanvasElement, spriteNum: number, config: CatConfig) {
-  const S = 50;
-  const SCALE = 3;
-  const url = (name: string) => `${SPRITE_BASE}${name}_${spriteNum}.png`;
-
-  const offscreen = new OffscreenCanvas(S, S);
-  const octx = offscreen.getContext("2d")!;
-
-  const pelt = await loadSpriteImg(url(config.pelt));
-  if (pelt) octx.drawImage(pelt, 0, 0, S, S);
-
-  // Optional multiply tint (used for lilac/desaturated pelts)
-  if (config.tint) {
-    const tintOverlay = new OffscreenCanvas(S, S);
-    const tc = tintOverlay.getContext("2d")!;
-    tc.drawImage(offscreen, 0, 0);
-    tc.globalCompositeOperation = "source-in";
-    tc.fillStyle = config.tint;
-    tc.fillRect(0, 0, S, S);
-    const tinted = new OffscreenCanvas(S, S);
-    const tt = tinted.getContext("2d")!;
-    tt.drawImage(offscreen, 0, 0);
-    tt.globalCompositeOperation = "multiply";
-    tt.drawImage(tintOverlay, 0, 0);
-    octx.globalCompositeOperation = "source-in";
-    octx.drawImage(tinted, 0, 0);
-    octx.globalCompositeOperation = "source-over";
-  }
-
-  const eyes = await loadSpriteImg(url(config.eyes));
-  if (eyes) octx.drawImage(eyes, 0, 0, S, S);
-  const eyes2 = await loadSpriteImg(url(config.eyes2));
-  if (eyes2) octx.drawImage(eyes2, 0, 0, S, S);
-
-  const lines = await loadSpriteImg(url("lines"));
-  if (lines) octx.drawImage(lines, 0, 0, S, S);
-
-  const skin = await loadSpriteImg(url(config.skin));
-  if (skin) octx.drawImage(skin, 0, 0, S, S);
-
-  const collar = await loadSpriteImg(url(config.collar));
-  if (collar) octx.drawImage(collar, 0, 0, S, S);
-
-  canvas.width = S * SCALE;
-  canvas.height = S * SCALE;
-  const ctx = canvas.getContext("2d")!;
-  ctx.imageSmoothingEnabled = false;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.save();
-  ctx.scale(-SCALE, SCALE);
-  ctx.drawImage(offscreen, -S, 0);
-  ctx.restore();
+function framePath(spriteSet: SpriteSet, animation: CatAnimation, frameIndex: number) {
+  return `/sprites/split/${spriteSet}/${animation}_${frameIndex}.png`;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getAnimationFrames(spriteSet: SpriteSet, animation: CatAnimation) {
+  return Array.from({ length: FRAMES_PER_ANIMATION }, (_, index) => framePath(spriteSet, animation, index));
+}
+
+async function drawFrame(canvas: HTMLCanvasElement, frameUrl: string) {
+  const img = await loadSpriteImg(frameUrl);
+  if (!img) return;
+  canvas.width = OUTPUT_SIZE;
+  canvas.height = OUTPUT_SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+  ctx.drawImage(img, 0, 0, SPRITE_SIZE, SPRITE_SIZE, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+}
+
+function preloadFrames(urls: string[]) {
+  urls.forEach((url) => {
+    void loadSpriteImg(url);
+  });
+}
 
 function pick<T>(pool: T[], previous?: T): T {
   if (pool.length === 1) return pool[0];
@@ -253,42 +189,55 @@ function expressionFromMood(mood: CatMood, seed: number): CatExpression {
   return "calm";
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function resolveAnimation(mood: CatMood, idleEvent: CatIdleEvent, previous?: CatAnimation): CatAnimation {
+  if (idleEvent) return IDLE_ANIMATION[idleEvent];
+  return pick(MOOD_ANIMATIONS[mood], previous);
+}
+
+function rotateSpriteSet(theme: "ember" | "mist" | "grove", previous?: SpriteSet): SpriteSet {
+  const primary = THEME_PRIMARY_SET[theme];
+  const shouldUsePrimary = Math.random() < 0.7;
+  if (shouldUsePrimary && previous !== primary) return primary;
+  return pick(SPRITE_SET_ORDER, previous);
+}
 
 type FocusCatState = {
   manualMood: CatMood | null;
-  nudged: boolean;
   quote: string;
   expressionSeed: number;
   expressionOverride: CatExpression | null;
   persona: string;
   idleEvent: CatIdleEvent;
   reactionEmoji: string | null;
-  spriteNum: number;
+  animation: CatAnimation;
+  frameIndex: number;
+  spriteSet: SpriteSet;
 };
 
 export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember", compact = false }: FocusCatProps) {
   const autoMood = resolveMood(mode, isRunning);
-  const catConfig = THEME_CAT[theme];
   const [state, setState] = useState<FocusCatState>(() => ({
     manualMood: null,
-    nudged: false,
     quote: first(CAT_QUOTES[autoMood]),
     expressionSeed: 0,
     expressionOverride: null,
     persona: first(CAT_PERSONALITIES[autoMood]),
     idleEvent: null,
     reactionEmoji: null,
-    spriteNum: MOOD_SPRITE[autoMood][0],
+    animation: first(MOOD_ANIMATIONS[autoMood]),
+    frameIndex: 0,
+    spriteSet: THEME_PRIMARY_SET[theme],
   }));
 
   const timersRef = useRef<{
-    nudged: number | null;
     expression: number | null;
     idle: number | null;
     idleClear: number | null;
     reaction: number | null;
-  }>({ nudged: null, expression: null, idle: null, idleClear: null, reaction: null });
+    moodRevert: number | null;
+  }>({ expression: null, idle: null, idleClear: null, reaction: null, moodRevert: null });
+
+  const clickingRef = useRef(false);
 
   const mood = state.manualMood ?? autoMood;
   const expression = useMemo(
@@ -296,75 +245,148 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
     [mood, state.expressionOverride, state.expressionSeed],
   );
 
-  // Quote + personality rotation
+  const animationFrames = useMemo(
+    () => getAnimationFrames(state.spriteSet, state.animation),
+    [state.spriteSet, state.animation],
+  );
+
+  const activeFrame = animationFrames[state.frameIndex] ?? animationFrames[0];
+
+  useEffect(() => {
+    setState((p) => {
+      const nextSpriteSet = p.spriteSet === THEME_PRIMARY_SET[theme] ? p.spriteSet : THEME_PRIMARY_SET[theme];
+      if (nextSpriteSet === p.spriteSet) return p;
+      return { ...p, spriteSet: nextSpriteSet, frameIndex: 0 };
+    });
+  }, [theme]);
+
+  // Re-pick animation only when mood changes; idle events update animation directly in their own setState calls.
+  useEffect(() => {
+    setState((p) => {
+      const nextAnimation = resolveAnimation(mood, p.idleEvent, p.animation);
+      if (p.animation === nextAnimation) return p;
+      return { ...p, animation: nextAnimation, frameIndex: 0 };
+    });
+  }, [mood]);
+
+  // Quote + personality rotation and animation variation.
   useEffect(() => {
     const primeId = window.setTimeout(() => {
       setState((p) => ({
         ...p,
         persona: pick(CAT_PERSONALITIES[mood], p.persona),
         expressionSeed: p.expressionSeed + 1,
-        spriteNum: pick(MOOD_SPRITE[mood], p.spriteNum),
+        animation: resolveAnimation(mood, p.idleEvent, p.animation),
+        frameIndex: 0,
+        spriteSet: rotateSpriteSet(theme, p.spriteSet),
       }));
     }, 0);
+
     const intervalId = window.setInterval(() => {
       setState((p) => ({
         ...p,
         quote: pick(CAT_QUOTES[mood], p.quote),
         persona: pick(CAT_PERSONALITIES[mood], p.persona),
         expressionSeed: Math.random() > 0.48 ? p.expressionSeed + 1 : p.expressionSeed,
-        spriteNum: pick(MOOD_SPRITE[mood], p.spriteNum),
+        animation: resolveAnimation(mood, p.idleEvent, p.animation),
+        frameIndex: 0,
+        spriteSet: rotateSpriteSet(theme, p.spriteSet),
       }));
     }, 12000);
-    return () => { window.clearTimeout(primeId); window.clearInterval(intervalId); };
-  }, [mood]);
 
-  // Auto idle events — cat randomly yawns, twitches, or blinks
+    return () => {
+      window.clearTimeout(primeId);
+      window.clearInterval(intervalId);
+    };
+  }, [mood, theme]);
+
+  // Auto idle events trigger look-around and rest animations.
   useEffect(() => {
     const timers = timersRef.current;
-    const IDLE_EVENTS: CatIdleEvent[] = ["yawn", "twitch", "blink"];
+    const IDLE_EVENTS: Exclude<CatIdleEvent, null>[] = ["yawn", "twitch", "blink"];
+
     const scheduleNext = () => {
-      const delay = 14000 + Math.random() * 18000; // 14–32s
+      const delay = 14000 + Math.random() * 18000;
       timers.idle = window.setTimeout(() => {
         const event = IDLE_EVENTS[Math.floor(Math.random() * IDLE_EVENTS.length)];
-        setState((p) => ({ ...p, idleEvent: event }));
+        setState((p) => ({
+          ...p,
+          idleEvent: event,
+          animation: resolveAnimation(mood, event, p.animation),
+          frameIndex: 0,
+        }));
+
         timers.idleClear = window.setTimeout(() => {
           setState((p) => ({ ...p, idleEvent: null }));
           scheduleNext();
         }, 1400);
       }, delay);
     };
+
     scheduleNext();
+
     return () => {
       if (timers.idle !== null) window.clearTimeout(timers.idle);
       if (timers.idleClear !== null) window.clearTimeout(timers.idleClear);
     };
-  }, []);
+  }, [mood]);
 
-  // Cleanup timers on unmount
+  // Cleanup timers on unmount.
   useEffect(() => {
     const t = timersRef.current;
     return () => {
-      [t.nudged, t.expression, t.idle, t.idleClear, t.reaction].forEach((id) => {
+      [t.expression, t.idle, t.idleClear, t.reaction, t.moodRevert].forEach((id) => {
         if (id !== null) window.clearTimeout(id);
       });
     };
   }, []);
 
-  // Canvas render — re-runs on sprite rotation or theme change
+  // Animation clock.
+  useEffect(() => {
+    if (animationFrames.length < 2) return;
+    const fps = ANIMATION_FPS[state.animation];
+    const intervalMs = Math.max(50, Math.floor(1000 / fps));
+
+    const id = window.setInterval(() => {
+      setState((p) => ({
+        ...p,
+        frameIndex: (p.frameIndex + 1) % animationFrames.length,
+      }));
+    }, intervalMs);
+
+    return () => window.clearInterval(id);
+  }, [animationFrames.length, state.animation]);
+
+  // Preload active and likely next animations to keep transitions smooth.
+  useEffect(() => {
+    const preload = new Set<string>();
+    animationFrames.forEach((frame) => preload.add(frame));
+    MOOD_ANIMATIONS[mood].forEach((anim) => {
+      getAnimationFrames(state.spriteSet, anim).forEach((frame) => preload.add(frame));
+    });
+    preloadFrames([...preload]);
+  }, [animationFrames, mood, state.spriteSet]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    renderCatCanvas(canvas, state.spriteNum, catConfig).catch(() => {});
-  }, [state.spriteNum, catConfig]);
+    if (!canvas || !activeFrame) return;
+    drawFrame(canvas, activeFrame).catch(() => {});
+  }, [activeFrame]);
 
   const handleCatTap = useCallback(() => {
+    // Debounce: ignore clicks within 600ms of the last one.
+    if (clickingRef.current) return;
+    clickingRef.current = true;
+    window.setTimeout(() => { clickingRef.current = false; }, 600);
+
     const nextMood: CatMood = mood === "sleep" ? "play" : mood === "play" ? "stretch" : "sleep";
     const emoji = pick(REACTION_EMOJI[nextMood]);
+    const t = timersRef.current;
 
-    if (timersRef.current.expression !== null) window.clearTimeout(timersRef.current.expression);
-    if (timersRef.current.nudged !== null) window.clearTimeout(timersRef.current.nudged);
-    if (timersRef.current.reaction !== null) window.clearTimeout(timersRef.current.reaction);
+    if (t.expression !== null) window.clearTimeout(t.expression);
+    if (t.reaction !== null) window.clearTimeout(t.reaction);
+    if (t.moodRevert !== null) window.clearTimeout(t.moodRevert);
 
     setState((p) => ({
       ...p,
@@ -372,33 +394,35 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
       quote: pick(CAT_QUOTES[nextMood], p.quote),
       persona: pick(CAT_PERSONALITIES[nextMood], p.persona),
       expressionOverride: nextMood === "sleep" ? "sleepy" : "happy",
-      nudged: true,
       reactionEmoji: emoji,
-      spriteNum: pick(MOOD_SPRITE[nextMood]),
+      animation: resolveAnimation(nextMood, null, p.animation),
+      frameIndex: 0,
+      spriteSet: rotateSpriteSet(theme, p.spriteSet),
     }));
 
-    timersRef.current.expression = window.setTimeout(() => {
+    t.expression = window.setTimeout(() => {
       setState((p) => ({ ...p, expressionOverride: null }));
-      timersRef.current.expression = null;
+      t.expression = null;
     }, 1100);
 
-    timersRef.current.nudged = window.setTimeout(() => {
-      setState((p) => ({ ...p, nudged: false }));
-      timersRef.current.nudged = null;
-    }, 420);
-
-    timersRef.current.reaction = window.setTimeout(() => {
+    t.reaction = window.setTimeout(() => {
       setState((p) => ({ ...p, reactionEmoji: null }));
-      timersRef.current.reaction = null;
+      t.reaction = null;
     }, 1200);
-  }, [mood]);
+
+    // Revert manual mood back to auto after 30 seconds.
+    t.moodRevert = window.setTimeout(() => {
+      setState((p) => ({ ...p, manualMood: null }));
+      t.moodRevert = null;
+    }, 30000);
+  }, [mood, theme]);
 
   return (
     <section className={compact ? "focus-pet focus-pet-compact" : "focus-pet"} aria-live="polite" aria-atomic="true">
       <div className="focus-pet-stage">
         <button
           type="button"
-          className={`focus-pet-cat-btn${state.nudged ? " focus-pet-cat-btn-nudged" : ""}`}
+          className="focus-pet-cat-btn"
           onClick={handleCatTap}
           aria-label="Nudge companion"
         >
@@ -407,12 +431,11 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
               {state.reactionEmoji}
             </span>
           )}
-          {/* Sprites: cgen-tools/pixel-cat-maker — CC BY-NC 4.0, ClanGen contributors */}
           <canvas
             ref={canvasRef}
-            className={`focus-cat focus-cat-${mood} focus-cat-expression-${expression} focus-cat-idle-${state.idleEvent ?? "none"}`}
-            width={150}
-            height={150}
+            className={`focus-cat focus-cat-${mood} focus-cat-anim-${state.animation} focus-cat-expression-${expression} focus-cat-idle-${state.idleEvent ?? "none"}`}
+            width={OUTPUT_SIZE}
+            height={OUTPUT_SIZE}
             aria-hidden="true"
           />
         </button>

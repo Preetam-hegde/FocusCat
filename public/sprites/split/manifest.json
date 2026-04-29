@@ -1,0 +1,307 @@
+{
+  "generatedAt": "2026-04-29T17:36:26.946Z",
+  "frameSize": 32,
+  "framesPerAnimation": 4,
+  "animations": [
+    {
+      "name": "sitting_down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "name": "looking_around",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "name": "laying_down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "name": "walking",
+      "fps": 6,
+      "loop": true
+    },
+    {
+      "name": "running",
+      "fps": 10,
+      "loop": true
+    },
+    {
+      "name": "running2",
+      "fps": 12,
+      "loop": true
+    }
+  ],
+  "cats": [
+    {
+      "id": "black_1",
+      "sheet": "/sprites/black_1.png",
+      "tileSize": 32,
+      "animations": {
+        "sitting_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/sitting_down_0.png",
+            "/sprites/split/black_1/sitting_down_1.png",
+            "/sprites/split/black_1/sitting_down_2.png",
+            "/sprites/split/black_1/sitting_down_3.png"
+          ]
+        },
+        "looking_around": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/looking_around_0.png",
+            "/sprites/split/black_1/looking_around_1.png",
+            "/sprites/split/black_1/looking_around_2.png",
+            "/sprites/split/black_1/looking_around_3.png"
+          ]
+        },
+        "laying_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/laying_down_0.png",
+            "/sprites/split/black_1/laying_down_1.png",
+            "/sprites/split/black_1/laying_down_2.png",
+            "/sprites/split/black_1/laying_down_3.png"
+          ]
+        },
+        "walking": {
+          "fps": 6,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/walking_0.png",
+            "/sprites/split/black_1/walking_1.png",
+            "/sprites/split/black_1/walking_2.png",
+            "/sprites/split/black_1/walking_3.png"
+          ]
+        },
+        "running": {
+          "fps": 10,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/running_0.png",
+            "/sprites/split/black_1/running_1.png",
+            "/sprites/split/black_1/running_2.png",
+            "/sprites/split/black_1/running_3.png"
+          ]
+        },
+        "running2": {
+          "fps": 12,
+          "loop": true,
+          "frames": [
+            "/sprites/split/black_1/running2_0.png",
+            "/sprites/split/black_1/running2_1.png",
+            "/sprites/split/black_1/running2_2.png",
+            "/sprites/split/black_1/running2_3.png"
+          ]
+        }
+      }
+    },
+    {
+      "id": "brown_8",
+      "sheet": "/sprites/brown_8.png",
+      "tileSize": 32,
+      "animations": {
+        "sitting_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/sitting_down_0.png",
+            "/sprites/split/brown_8/sitting_down_1.png",
+            "/sprites/split/brown_8/sitting_down_2.png",
+            "/sprites/split/brown_8/sitting_down_3.png"
+          ]
+        },
+        "looking_around": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/looking_around_0.png",
+            "/sprites/split/brown_8/looking_around_1.png",
+            "/sprites/split/brown_8/looking_around_2.png",
+            "/sprites/split/brown_8/looking_around_3.png"
+          ]
+        },
+        "laying_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/laying_down_0.png",
+            "/sprites/split/brown_8/laying_down_1.png",
+            "/sprites/split/brown_8/laying_down_2.png",
+            "/sprites/split/brown_8/laying_down_3.png"
+          ]
+        },
+        "walking": {
+          "fps": 6,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/walking_0.png",
+            "/sprites/split/brown_8/walking_1.png",
+            "/sprites/split/brown_8/walking_2.png",
+            "/sprites/split/brown_8/walking_3.png"
+          ]
+        },
+        "running": {
+          "fps": 10,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/running_0.png",
+            "/sprites/split/brown_8/running_1.png",
+            "/sprites/split/brown_8/running_2.png",
+            "/sprites/split/brown_8/running_3.png"
+          ]
+        },
+        "running2": {
+          "fps": 12,
+          "loop": true,
+          "frames": [
+            "/sprites/split/brown_8/running2_0.png",
+            "/sprites/split/brown_8/running2_1.png",
+            "/sprites/split/brown_8/running2_2.png",
+            "/sprites/split/brown_8/running2_3.png"
+          ]
+        }
+      }
+    },
+    {
+      "id": "orange_0",
+      "sheet": "/sprites/orange_0.png",
+      "tileSize": 32,
+      "animations": {
+        "sitting_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/sitting_down_0.png",
+            "/sprites/split/orange_0/sitting_down_1.png",
+            "/sprites/split/orange_0/sitting_down_2.png",
+            "/sprites/split/orange_0/sitting_down_3.png"
+          ]
+        },
+        "looking_around": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/looking_around_0.png",
+            "/sprites/split/orange_0/looking_around_1.png",
+            "/sprites/split/orange_0/looking_around_2.png",
+            "/sprites/split/orange_0/looking_around_3.png"
+          ]
+        },
+        "laying_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/laying_down_0.png",
+            "/sprites/split/orange_0/laying_down_1.png",
+            "/sprites/split/orange_0/laying_down_2.png",
+            "/sprites/split/orange_0/laying_down_3.png"
+          ]
+        },
+        "walking": {
+          "fps": 6,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/walking_0.png",
+            "/sprites/split/orange_0/walking_1.png",
+            "/sprites/split/orange_0/walking_2.png",
+            "/sprites/split/orange_0/walking_3.png"
+          ]
+        },
+        "running": {
+          "fps": 10,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/running_0.png",
+            "/sprites/split/orange_0/running_1.png",
+            "/sprites/split/orange_0/running_2.png",
+            "/sprites/split/orange_0/running_3.png"
+          ]
+        },
+        "running2": {
+          "fps": 12,
+          "loop": true,
+          "frames": [
+            "/sprites/split/orange_0/running2_0.png",
+            "/sprites/split/orange_0/running2_1.png",
+            "/sprites/split/orange_0/running2_2.png",
+            "/sprites/split/orange_0/running2_3.png"
+          ]
+        }
+      }
+    },
+    {
+      "id": "white_grey_1",
+      "sheet": "/sprites/white_grey_1.png",
+      "tileSize": 32,
+      "animations": {
+        "sitting_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/sitting_down_0.png",
+            "/sprites/split/white_grey_1/sitting_down_1.png",
+            "/sprites/split/white_grey_1/sitting_down_2.png",
+            "/sprites/split/white_grey_1/sitting_down_3.png"
+          ]
+        },
+        "looking_around": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/looking_around_0.png",
+            "/sprites/split/white_grey_1/looking_around_1.png",
+            "/sprites/split/white_grey_1/looking_around_2.png",
+            "/sprites/split/white_grey_1/looking_around_3.png"
+          ]
+        },
+        "laying_down": {
+          "fps": 2,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/laying_down_0.png",
+            "/sprites/split/white_grey_1/laying_down_1.png",
+            "/sprites/split/white_grey_1/laying_down_2.png",
+            "/sprites/split/white_grey_1/laying_down_3.png"
+          ]
+        },
+        "walking": {
+          "fps": 6,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/walking_0.png",
+            "/sprites/split/white_grey_1/walking_1.png",
+            "/sprites/split/white_grey_1/walking_2.png",
+            "/sprites/split/white_grey_1/walking_3.png"
+          ]
+        },
+        "running": {
+          "fps": 10,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/running_0.png",
+            "/sprites/split/white_grey_1/running_1.png",
+            "/sprites/split/white_grey_1/running_2.png",
+            "/sprites/split/white_grey_1/running_3.png"
+          ]
+        },
+        "running2": {
+          "fps": 12,
+          "loop": true,
+          "frames": [
+            "/sprites/split/white_grey_1/running2_0.png",
+            "/sprites/split/white_grey_1/running2_1.png",
+            "/sprites/split/white_grey_1/running2_2.png",
+            "/sprites/split/white_grey_1/running2_3.png"
+          ]
+        }
+      }
+    }
+  ]
+}

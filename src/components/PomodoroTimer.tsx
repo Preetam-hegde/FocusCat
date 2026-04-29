@@ -13,6 +13,7 @@ type PomodoroTimerProps = {
   onWorkComplete: (minutes: number) => void;
   onModeChange?: (mode: TimerMode) => void;
   compact?: boolean;
+  immersive?: boolean;
   theme?: "ember" | "mist" | "grove";
 };
 
@@ -27,8 +28,14 @@ function formatSeconds(totalSeconds: number) {
   return `${minutes}:${seconds}`;
 }
 
-export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, theme = "ember" }: PomodoroTimerProps) {
-  const [timerState, setTimerState] = useState<StoredTimerState>(DEFAULT_TIMER_STATE);
+export function PomodoroTimer({
+  onWorkComplete,
+  onModeChange,
+  compact = false,
+  immersive = false,
+  theme = "ember"
+}: PomodoroTimerProps) {
+  const [timerState, setTimerState] = useState<StoredTimerState>(() => hydrateTimerSharedState() ?? DEFAULT_TIMER_STATE);
   const { workMinutes, breakMinutes, mode, timeLeft, isRunning, autoStartNext, cycleCount } = timerState;
 
   function updateTimerState(updater: StoredTimerState | ((prev: StoredTimerState) => StoredTimerState)) {
@@ -38,10 +45,6 @@ export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, t
       return next;
     });
   }
-
-  useEffect(() => {
-    setTimerState(hydrateTimerSharedState());
-  }, []);
 
   useEffect(() => {
     onModeChange?.(mode);
@@ -130,18 +133,20 @@ export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, t
 
   return (
     <section
-      className={compact ? "panel timer-panel timer-panel-compact" : "panel timer-panel"}
+      className={`${compact ? "panel timer-panel timer-panel-compact" : "panel timer-panel"}${immersive ? " timer-panel-immersive" : ""}`}
       data-running={String(isRunning)}
     >
-      <div className="timer-head section-head">
-        <div>
-          <p className="eyebrow">Pomodoro</p>
-          <h2>{mode === "work" ? "Work Sprint" : "Break Reset"}</h2>
+      {!immersive && (
+        <div className="timer-head section-head">
+          <div>
+            <p className="eyebrow">Pomodoro</p>
+            <h2>{mode === "work" ? "Work Sprint" : "Break Reset"}</h2>
+          </div>
+          <span className={mode === "work" ? "mode-pill" : "mode-pill mode-pill-break"}>
+            {mode === "work" ? "Focus" : "Recover"}
+          </span>
         </div>
-        <span className={mode === "work" ? "mode-pill" : "mode-pill mode-pill-break"}>
-          {mode === "work" ? "Focus" : "Recover"}
-        </span>
-      </div>
+      )}
 
       <div className="timer-ring-wrap">
         {mode === "break" ? (
@@ -171,39 +176,44 @@ export function PomodoroTimer({ onWorkComplete, onModeChange, compact = false, t
         <div className="timer-display">{formatSeconds(Math.max(0, timeLeft))}</div>
       </div>
 
-      <div className="timer-kpis">
-        <article>
-          <p>Preset</p>
-          <h4>{presetLabel}</h4>
-        </article>
-        <article>
-          <p>Cycles</p>
-          <h4>{cycleCount}</h4>
-        </article>
-      </div>
+      {!immersive && (
+        <div className="timer-kpis">
+          <article>
+            <p>Preset</p>
+            <h4>{presetLabel}</h4>
+          </article>
+          <article>
+            <p>Cycles</p>
+            <h4>{cycleCount}</h4>
+          </article>
+        </div>
+      )}
 
       <FocusCat mode={mode} isRunning={isRunning} theme={theme} compact={compact} />
 
-      <div className="actions-row">
-        <button className="accent" onClick={() => updateTimerState((prev) => ({ ...prev, isRunning: !prev.isRunning }))}>
-          {isRunning ? "Pause" : "Start"}
-        </button>
-        <button onClick={skipToNext}>Skip</button>
-        <button
-          onClick={() => {
-            updateTimerState((prev) => ({
-              ...prev,
-              mode: "work",
-              timeLeft: prev.workMinutes * 60,
-              isRunning: false
-            }));
-          }}
-        >
-          Reset
-        </button>
-      </div>
+      {!immersive && (
+        <div className="actions-row">
+          <button className="accent" onClick={() => updateTimerState((prev) => ({ ...prev, isRunning: !prev.isRunning }))}>
+            {isRunning ? "Pause" : "Start"}
+          </button>
+          <button onClick={skipToNext}>Skip</button>
+          <button
+            onClick={() => {
+              updateTimerState((prev) => ({
+                ...prev,
+                mode: "work",
+                timeLeft: prev.workMinutes * 60,
+                isRunning: false
+              }));
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      )}
 
-      {!compact && <p className="meta">Shortcut: Space toggles start/pause.</p>}
+      {!compact && !immersive && <p className="meta">Shortcut: Space toggles start/pause.</p>}
+      {immersive && <p className="meta timer-immersive-hint">Space toggles timer • Esc exits focus</p>}
     </section>
   );
 }

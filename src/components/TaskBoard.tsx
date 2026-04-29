@@ -1,23 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { useLocalStorage } from "@/lib/useLocalStorage";
 import type { TaskItem } from "@/lib/types";
 
 type TaskBoardProps = {
-  sessionId: string;
+  tasks: TaskItem[];
+  onTasksChange: (tasks: TaskItem[]) => void;
+  onTaskCompleted?: (taskId: string) => void;
+  suggestedTaskText?: string | null;
 };
 
-export function TaskBoard({ sessionId }: TaskBoardProps) {
-  const [taskMap, setTaskMap] = useLocalStorage<Record<string, TaskItem[]>>("focus-task-map", {});
+export function TaskBoard({ tasks, onTasksChange, onTaskCompleted, suggestedTaskText }: TaskBoardProps) {
   const [draft, setDraft] = useState("");
-  const tasks = taskMap[sessionId] ?? [];
 
   const completedCount = tasks.filter((task) => task.done).length;
+  const pendingCount = tasks.length - completedCount;
   const completionRatio = tasks.length ? Math.round((completedCount / tasks.length) * 100) : 0;
 
   function updateTasks(next: TaskItem[]) {
-    setTaskMap((prev) => ({ ...prev, [sessionId]: next }));
+    onTasksChange(next);
   }
 
   function addTask() {
@@ -39,41 +40,57 @@ export function TaskBoard({ sessionId }: TaskBoardProps) {
     <section className="panel task-board">
       <div className="section-head">
         <h3>Session Tasks</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <div className="task-head-meta">
+          <p className="task-count">{completedCount} / {tasks.length} done</p>
           {completedCount > 0 && (
-            <button
-              onClick={() => updateTasks(tasks.filter((t) => !t.done))}
-              style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}
-            >
+            <button className="ghost task-clear-btn" onClick={() => updateTasks(tasks.filter((t) => !t.done))}>
               Clear done
             </button>
           )}
-          <p>{completedCount} / {tasks.length} done</p>
         </div>
       </div>
 
+      <div className="task-progress-meta" aria-live="polite">
+        <p>{pendingCount} remaining</p>
+        <p>{completionRatio}% complete</p>
+      </div>
       <div className="task-progress-track" aria-hidden="true">
         <span style={{ width: `${completionRatio}%` }} />
       </div>
 
-      <div className="input-row">
+      {suggestedTaskText && pendingCount > 0 && (
+        <div className="task-suggested" aria-live="polite">
+          <p className="task-suggested-label">Suggested next</p>
+          <strong>{suggestedTaskText}</strong>
+        </div>
+      )}
+
+      <div className="input-row task-compose">
         <input
+          className="task-input"
           type="text"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
+          maxLength={120}
           placeholder="Add a task for this focus block"
           onKeyDown={(event) => {
             if (event.key === "Enter") addTask();
           }}
         />
-        <button className="accent" onClick={addTask}>Add</button>
+        <button className="accent task-add-btn" onClick={addTask}>Add</button>
       </div>
+      <p className="task-compose-hint">{draft.trim().length}/120</p>
 
       <ul className="task-list">
-        {tasks.length === 0 && <li className="task-empty">No tasks yet. Add one to start your sprint.</li>}
+        {tasks.length === 0 && (
+          <li className="task-empty">
+            <p>No tasks yet.</p>
+            <span>Add one to start your sprint.</span>
+          </li>
+        )}
         {tasks.map((task) => (
-          <li key={task.id} className={task.done ? "task-done" : ""}>
-            <label>
+          <li key={task.id} className={task.done ? "task-item task-done" : "task-item"}>
+            <label className="task-main">
               <input
                 type="checkbox"
                 checked={task.done}
@@ -82,15 +99,20 @@ export function TaskBoard({ sessionId }: TaskBoardProps) {
                     candidate.id === task.id ? { ...candidate, done: !candidate.done } : candidate
                   );
                   updateTasks(next);
+                  const toggled = next.find((candidate) => candidate.id === task.id);
+                  if (toggled?.done) {
+                    onTaskCompleted?.(task.id);
+                  }
                 }}
               />
-              <span>{task.text}</span>
+              <span className="task-text">{task.text}</span>
             </label>
             <button
+              className="ghost task-delete-btn"
               aria-label="Delete task"
               onClick={() => updateTasks(tasks.filter((candidate) => candidate.id !== task.id))}
             >
-              ×
+              Delete
             </button>
           </li>
         ))}

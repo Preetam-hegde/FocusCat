@@ -1,5 +1,6 @@
 export type TimerMode = "work" | "break";
 export type FocusTheme = "ember" | "mist" | "grove";
+export type FocusSurface = "minimal" | "premium";
 
 export type TaskItem = {
   id: string;
