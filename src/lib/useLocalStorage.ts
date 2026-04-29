@@ -1,10 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const memoryCache = new Map<string, unknown>();
 
-export function useLocalStorage<T>(key: string, initialValue: T) {
+type UseLocalStorageOptions = {
+  writeDelayMs?: number;
+};
+
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options: UseLocalStorageOptions = {}
+) {
   const [value, setValue] = useState<T>(() => {
     if (memoryCache.has(key)) {
       return memoryCache.get(key) as T;
@@ -13,6 +21,9 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     return initialValue;
   });
   const [hydrated, setHydrated] = useState(false);
+  const writeTimeoutRef = useRef<number | null>(null);
+
+  const writeDelayMs = options.writeDelayMs ?? 250;
 
   useEffect(() => {
     if (memoryCache.has(key)) {
@@ -45,8 +56,26 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
   useEffect(() => {
     memoryCache.set(key, value);
     if (!hydrated) return;
-    window.localStorage.setItem(key, JSON.stringify(value));
-  }, [hydrated, key, value]);
+
+    if (writeTimeoutRef.current !== null) {
+      window.clearTimeout(writeTimeoutRef.current);
+    }
+
+    writeTimeoutRef.current = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } finally {
+        writeTimeoutRef.current = null;
+      }
+    }, writeDelayMs);
+
+    return () => {
+      if (writeTimeoutRef.current !== null) {
+        window.clearTimeout(writeTimeoutRef.current);
+        writeTimeoutRef.current = null;
+      }
+    };
+  }, [hydrated, key, value, writeDelayMs]);
 
   return [value, setValue, hydrated] as const;
 }

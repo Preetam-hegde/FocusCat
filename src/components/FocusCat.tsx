@@ -112,12 +112,6 @@ const CAT_QUOTES: Record<CatMood, string[]> = {
   ],
 };
 
-const REACTION_EMOJI: Record<CatMood, string[]> = {
-  sleep: ["💤", "😴", "🌙", "✨", "💭"],
-  play: ["⚡", "🐾", "✨", "💥", "🎯"],
-  stretch: ["🔥", "⚡", "🎯", "💡", "✨"],
-};
-
 const spriteCache = new Map<string, Promise<HTMLImageElement | null>>();
 
 function loadSpriteImg(src: string): Promise<HTMLImageElement | null> {
@@ -208,7 +202,7 @@ type FocusCatState = {
   expressionOverride: CatExpression | null;
   persona: string;
   idleEvent: CatIdleEvent;
-  reactionEmoji: string | null;
+  tapPulse: boolean;
   animation: CatAnimation;
   frameIndex: number;
   spriteSet: SpriteSet;
@@ -223,7 +217,7 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
     expressionOverride: null,
     persona: first(CAT_PERSONALITIES[autoMood]),
     idleEvent: null,
-    reactionEmoji: null,
+    tapPulse: false,
     animation: first(MOOD_ANIMATIONS[autoMood]),
     frameIndex: 0,
     spriteSet: THEME_PRIMARY_SET[theme],
@@ -233,9 +227,9 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
     expression: number | null;
     idle: number | null;
     idleClear: number | null;
-    reaction: number | null;
     moodRevert: number | null;
-  }>({ expression: null, idle: null, idleClear: null, reaction: null, moodRevert: null });
+    tapPulse: number | null;
+  }>({ expression: null, idle: null, idleClear: null, moodRevert: null, tapPulse: null });
 
   const clickingRef = useRef(false);
 
@@ -335,7 +329,7 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
   useEffect(() => {
     const t = timersRef.current;
     return () => {
-      [t.expression, t.idle, t.idleClear, t.reaction, t.moodRevert].forEach((id) => {
+      [t.expression, t.idle, t.idleClear, t.moodRevert, t.tapPulse].forEach((id) => {
         if (id !== null) window.clearTimeout(id);
       });
     };
@@ -381,12 +375,11 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
     window.setTimeout(() => { clickingRef.current = false; }, 600);
 
     const nextMood: CatMood = mood === "sleep" ? "play" : mood === "play" ? "stretch" : "sleep";
-    const emoji = pick(REACTION_EMOJI[nextMood]);
     const t = timersRef.current;
 
     if (t.expression !== null) window.clearTimeout(t.expression);
-    if (t.reaction !== null) window.clearTimeout(t.reaction);
     if (t.moodRevert !== null) window.clearTimeout(t.moodRevert);
+    if (t.tapPulse !== null) window.clearTimeout(t.tapPulse);
 
     setState((p) => ({
       ...p,
@@ -394,21 +387,21 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
       quote: pick(CAT_QUOTES[nextMood], p.quote),
       persona: pick(CAT_PERSONALITIES[nextMood], p.persona),
       expressionOverride: nextMood === "sleep" ? "sleepy" : "happy",
-      reactionEmoji: emoji,
+      tapPulse: true,
       animation: resolveAnimation(nextMood, null, p.animation),
       frameIndex: 0,
       spriteSet: rotateSpriteSet(theme, p.spriteSet),
     }));
 
+    t.tapPulse = window.setTimeout(() => {
+      setState((p) => ({ ...p, tapPulse: false }));
+      t.tapPulse = null;
+    }, 260);
+
     t.expression = window.setTimeout(() => {
       setState((p) => ({ ...p, expressionOverride: null }));
       t.expression = null;
     }, 1100);
-
-    t.reaction = window.setTimeout(() => {
-      setState((p) => ({ ...p, reactionEmoji: null }));
-      t.reaction = null;
-    }, 1200);
 
     // Revert manual mood back to auto after 30 seconds.
     t.moodRevert = window.setTimeout(() => {
@@ -422,15 +415,10 @@ export const FocusCat = memo(function FocusCat({ mode, isRunning, theme = "ember
       <div className="focus-pet-stage">
         <button
           type="button"
-          className="focus-pet-cat-btn"
+          className={`focus-pet-cat-btn${state.tapPulse ? " focus-pet-cat-btn-tap" : ""}`}
           onClick={handleCatTap}
           aria-label="Nudge companion"
         >
-          {state.reactionEmoji && (
-            <span className="focus-pet-reaction" aria-hidden="true">
-              {state.reactionEmoji}
-            </span>
-          )}
           <canvas
             ref={canvasRef}
             className={`focus-cat focus-cat-${mood} focus-cat-anim-${state.animation} focus-cat-expression-${expression} focus-cat-idle-${state.idleEvent ?? "none"}`}

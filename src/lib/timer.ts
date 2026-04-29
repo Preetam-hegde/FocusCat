@@ -13,9 +13,12 @@ export const DEFAULT_TIMER_STATE: StoredTimerState = {
 };
 
 const TIMER_STORAGE_KEY = "focus-timer-state";
+const RUNNING_PERSIST_INTERVAL_MS = 5000;
 
 let timerSharedState: StoredTimerState = DEFAULT_TIMER_STATE;
 let timerStateLoaded = false;
+let pendingPersistTimeout: number | null = null;
+let lastPersistedState: StoredTimerState = DEFAULT_TIMER_STATE;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
@@ -44,6 +47,34 @@ function sanitizeTimerState(candidate: unknown): StoredTimerState {
   };
 }
 
+function hasPersistentStateChange(prev: StoredTimerState, next: StoredTimerState) {
+  return (
+    prev.workMinutes !== next.workMinutes ||
+    prev.breakMinutes !== next.breakMinutes ||
+    prev.mode !== next.mode ||
+    prev.isRunning !== next.isRunning ||
+    prev.autoStartNext !== next.autoStartNext ||
+    prev.cycleCount !== next.cycleCount
+  );
+}
+
+function persistTimerStateNow(next: StoredTimerState) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(next));
+  lastPersistedState = next;
+}
+
+function schedulePersistTimerState() {
+  if (typeof window === "undefined") return;
+
+  if (pendingPersistTimeout !== null) return;
+
+  pendingPersistTimeout = window.setTimeout(() => {
+    pendingPersistTimeout = null;
+    persistTimerStateNow(timerSharedState);
+  }, RUNNING_PERSIST_INTERVAL_MS);
+}
+
 export function getTimerSharedState() {
   return timerSharedState;
 }
@@ -61,6 +92,7 @@ export function hydrateTimerSharedState() {
   } catch {
     timerSharedState = DEFAULT_TIMER_STATE;
   } finally {
+    lastPersistedState = timerSharedState;
     timerStateLoaded = true;
   }
 
@@ -72,10 +104,18 @@ export function setTimerSharedState(next: StoredTimerState) {
   timerStateLoaded = true;
 
   if (typeof window !== "undefined") {
-    window.localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerSharedState));
-  }
-}
+    const shouldPersistImmediately =
+      !timerSharedState.isRunning ||
+      hasPersistentStateChange(lastPersistedState, timerSharedState);
 
-export function resetTimerSharedState() {
-  setTimerSharedState(DEFAULT_TIMER_STATE);
+    if (shouldPersistImmediately) {
+      if (pendingPersistTimeout !== null) {
+        window.clearTimeout(pendingPersistTimeout);
+        pendingPersistTimeout = null;
+      }
+      persistTimerStateNow(timerSharedState);
+    } else {
+      schedulePersistTimerState();
+    }
+  }
 }

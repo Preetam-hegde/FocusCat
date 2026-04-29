@@ -1,12 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { PomodoroTimer } from "@/components/PomodoroTimer";
 import { TaskBoard } from "@/components/TaskBoard";
-import { LofiPlayer } from "@/components/LofiPlayer";
-import { AmbientMixer } from "@/components/AmbientMixer";
-import { NotesPad } from "@/components/NotesPad";
-import { StatsPanel } from "@/components/StatsPanel";
 import { ToastStack } from "@/components/Toast";
 import { useLocalStorage } from "@/lib/useLocalStorage";
 import { getTimerSharedState, setTimerSharedState } from "@/lib/timer";
@@ -39,6 +36,34 @@ const KEY_HINTS = [
   { key: "F", action: "Toggle focus mode" },
   { key: "?", action: "Open settings" }
 ];
+
+function PaneLoading({ label }: { label: string }) {
+  return (
+    <section className="panel" aria-live="polite">
+      <p className="meta">{label}</p>
+    </section>
+  );
+}
+
+const LofiPlayer = dynamic(() => import("@/components/LofiPlayer").then((mod) => mod.LofiPlayer), {
+  ssr: false,
+  loading: () => <PaneLoading label="Loading audio..." />
+});
+
+const AmbientMixer = dynamic(() => import("@/components/AmbientMixer").then((mod) => mod.AmbientMixer), {
+  ssr: false,
+  loading: () => <PaneLoading label="Loading mixer..." />
+});
+
+const NotesPad = dynamic(() => import("@/components/NotesPad").then((mod) => mod.NotesPad), {
+  ssr: false,
+  loading: () => <PaneLoading label="Loading notes..." />
+});
+
+const StatsPanel = dynamic(() => import("@/components/StatsPanel").then((mod) => mod.StatsPanel), {
+  ssr: false,
+  loading: () => <PaneLoading label="Loading stats..." />
+});
 
 function newSessionId() {
   return `session-${Date.now()}`;

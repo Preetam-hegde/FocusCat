@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Area,
   AreaChart,
@@ -80,13 +81,30 @@ function buildLastDays(total: number) {
   });
 }
 
-function getStreak(stats: DailyStatsMap) {
+function buildDailyTotals(stats: DailyStatsMap) {
+  return Object.entries(stats).reduce<Record<string, { focusedMinutes: number; completedSessions: number }>>(
+    (acc, [rawKey, value]) => {
+      const normalized = normalizeDateKey(rawKey) ?? normalizeDateKey(value.date) ?? rawKey;
+      const current = acc[normalized] ?? { focusedMinutes: 0, completedSessions: 0 };
+
+      acc[normalized] = {
+        focusedMinutes: current.focusedMinutes + (value.focusedMinutes ?? 0),
+        completedSessions: current.completedSessions + (value.completedSessions ?? 0)
+      };
+
+      return acc;
+    },
+    {}
+  );
+}
+
+function getStreakFromTotals(dailyTotalsMap: Record<string, { focusedMinutes: number }>) {
   let streak = 0;
   const cursor = new Date();
 
   while (true) {
     const key = dateKey(cursor);
-    if (!stats[key] || stats[key].focusedMinutes <= 0) break;
+    if ((dailyTotalsMap[key]?.focusedMinutes ?? 0) <= 0) break;
     streak += 1;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -94,51 +112,52 @@ function getStreak(stats: DailyStatsMap) {
   return streak;
 }
 
-function dailyTotals(stats: DailyStatsMap, targetKey: string) {
-  return Object.entries(stats).reduce(
-    (acc, [rawKey, value]) => {
-      const normalized = normalizeDateKey(rawKey) ?? normalizeDateKey(value.date) ?? rawKey;
-      if (normalized !== targetKey) return acc;
-
-      return {
-        focusedMinutes: acc.focusedMinutes + (value.focusedMinutes ?? 0),
-        completedSessions: acc.completedSessions + (value.completedSessions ?? 0)
-      };
-    },
-    { focusedMinutes: 0, completedSessions: 0 }
-  );
-}
-
 export function StatsPanel({ stats }: StatsPanelProps) {
-  const today = dateKey(new Date());
-  const todayEntry = dailyTotals(stats, today);
-  const streak = getStreak(stats);
+  const {
+    todayEntry,
+    deltaMinutes,
+    streak,
+    weeklySeries,
+    monthlySeries,
+    avgWeek,
+    peakDay
+  } = useMemo(() => {
+    const totalsByDay = buildDailyTotals(stats);
+    const todayKey = dateKey(new Date());
+    const todayValue = totalsByDay[todayKey] ?? { focusedMinutes: 0, completedSessions: 0 };
 
-  const yesterdayDate = new Date();
-  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayKey = dateKey(yesterdayDate);
-  const yesterdayEntry = dailyTotals(stats, yesterdayKey);
-  const deltaMinutes = (todayEntry?.focusedMinutes ?? 0) - (yesterdayEntry?.focusedMinutes ?? 0);
+    const yesterdayDate = new Date();
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayKey = dateKey(yesterdayDate);
+    const yesterdayValue = totalsByDay[yesterdayKey] ?? { focusedMinutes: 0, completedSessions: 0 };
 
-  const weekDays = buildLastDays(7);
-  const monthDays = buildLastDays(30);
+    const weekDays = buildLastDays(7);
+    const monthDays = buildLastDays(30);
 
-  const weeklySeries = weekDays.map(({ key, date }) => ({
-    day: date.toLocaleDateString("en-US", { weekday: "short" }),
-    minutes: dailyTotals(stats, key).focusedMinutes
-  }));
+    const weekly = weekDays.map(({ key, date }) => ({
+      day: date.toLocaleDateString("en-US", { weekday: "short" }),
+      minutes: totalsByDay[key]?.focusedMinutes ?? 0
+    }));
 
-  const monthlySeries = monthDays.map(({ key, date }) => ({
-    day: date.getDate().toString(),
-    minutes: dailyTotals(stats, key).focusedMinutes,
-    sessions: dailyTotals(stats, key).completedSessions
-  }));
+    const monthly = monthDays.map(({ key, date }) => ({
+      day: date.getDate().toString(),
+      minutes: totalsByDay[key]?.focusedMinutes ?? 0,
+      sessions: totalsByDay[key]?.completedSessions ?? 0
+    }));
 
-  const avgWeek = Math.round(weeklySeries.reduce((acc, item) => acc + item.minutes, 0) / 7);
-  const peakDay = weeklySeries.reduce(
-    (peak, item) => (item.minutes > peak.minutes ? item : peak),
-    { day: "-", minutes: 0 }
-  );
+    return {
+      todayEntry: todayValue,
+      deltaMinutes: todayValue.focusedMinutes - yesterdayValue.focusedMinutes,
+      streak: getStreakFromTotals(totalsByDay),
+      weeklySeries: weekly,
+      monthlySeries: monthly,
+      avgWeek: Math.round(weekly.reduce((acc, item) => acc + item.minutes, 0) / 7),
+      peakDay: weekly.reduce((peak, item) => (item.minutes > peak.minutes ? item : peak), {
+        day: "-",
+        minutes: 0
+      })
+    };
+  }, [stats]);
 
   return (
     <section className="panel">
